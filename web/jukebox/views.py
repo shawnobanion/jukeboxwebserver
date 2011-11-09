@@ -21,10 +21,15 @@ def get_event_queue(request, event_id):
 
 @csrf_exempt
 def create_event(request):
+    """
+    Creates an event.
+    """
     if request.method == 'POST':
-        _db.events.insert(json.loads(request.raw_post_data))        
-        return HttpResponse('Event added.')
-    return HttpResponse('No event added.')
+        event = json.loads(request.raw_post_data)
+        _db.events.save(event)
+        return HttpResponse(event['_id'])
+    return HttpResponse('Event was not added.')
+    return None
 
 def get_events(request):
     events = [{ 'id' : str(event['_id']), 'name' : event['name'] } for event in _db.events.find()]
