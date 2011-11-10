@@ -17,20 +17,16 @@ def enqueue_song(request, event_id, song_id):
     
 def get_event_queue(request, event_id):
     event = _db.events.find_one({ '_id' : objectid.ObjectId(event_id) })
-    return HttpResponse(json.dumps(event['queue'] if 'queue' in event else ''), mimetype="application/json")
+    return HttpResponse(json.dumps(event['queue'] if 'queue' in event else []), mimetype="application/json")
 
 @csrf_exempt
 def create_event(request):
-    """
-    Creates an event.
-    """
     if request.method == 'POST':
         event = json.loads(request.raw_post_data)
         _db.events.save(event)
         return HttpResponse(event['_id'])
     return HttpResponse('Event was not added.')
-    return None
 
 def get_events(request):
-    events = [{ 'id' : str(event['_id']), 'name' : event['name'] } for event in _db.events.find()]
+    events = [{ 'id' : str(event['_id']), 'name' : event['name'] if 'name' in event else '' } for event in _db.events.find()]
     return HttpResponse(json.dumps(events), mimetype="application/json")
