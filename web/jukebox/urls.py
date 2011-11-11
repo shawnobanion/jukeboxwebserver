@@ -9,6 +9,7 @@ urlpatterns = patterns('',
                        (r'^event/list/$', 'web.jukebox.views.get_events'),
                        (r'^event/create/$', 'web.jukebox.views.create_event'),
                        (r'^event/songs/(?P<event_id>[^/]+)/$', 'web.jukebox.views.get_event_songs'),
+                       (r'^event/dequeuesong/(?P<event_id>[^/]+)/$', 'web.jukebox.views.dequeue_song'),
                        (r'^event/queue/(?P<event_id>[^/]+)/$', 'web.jukebox.views.get_event_queue'),
                        (r'^event/enqueuesong/(?P<event_id>[^/]+)/(?P<song_id>[^/]+)/(?P<user_id>[^/]+)/$', 'web.jukebox.views.enqueue_song')
 )
