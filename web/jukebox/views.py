@@ -25,13 +25,14 @@ def dequeue_song(request, event_id):
     #song = get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$pop' : { 'queue' : -1 } } )
     try:
         event = get_event_col(is_test(request)).find_one( { '_id' : objectid.ObjectId(event_id) } )
-        if any(event['queue']):
-            song = event['queue'].pop(0)
-            get_event_col(is_test(request)).save(event)
-            return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
+        if 'queue' in event:
+            if any(event['queue']):
+                song = event['queue'].pop(0)
+                get_event_col(is_test(request)).save(event)
+                return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
         return HttpResponse(json.dumps(None), mimetype="application/json")
-    except:
-        raise Http404
+    except Exception as detail:
+        return HttpResponse('{"type":"'+str(type(detail))+'"}', mimetype="application/json")
 
 def enqueue_song(request, event_id, song_id, user_id):
     try:
@@ -66,9 +67,9 @@ def get_events(request):
         raise Http404
     
 def is_test(request):
-    if request.method == 'POST':
-        return 'test' in request.POST and request.POST['test'].lower() == 'true'
-    else:
+    #if request.method == 'POST':
+    #    return 'test' in request.POST and request.POST['test'].lower() == 'true'
+    #else:
         return 'test' in request.GET and request.GET['test'].lower() == 'true'
     
 def get_event_col(test):
