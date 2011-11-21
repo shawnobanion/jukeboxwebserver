@@ -1,6 +1,7 @@
 from django.http import HttpResponse, Http404
 import json
 import time
+#import operator
 from pymongo import Connection, objectid,ASCENDING, DESCENDING
 from django.views.decorators.csrf import csrf_exempt
 
@@ -43,12 +44,11 @@ def enqueue_song(request, event_id, song_id, user_id, bid_amount):
         return return_error(detail)
     
 def get_event_queue(request, event_id):
-    #   try:
+    try:
         event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
         return HttpResponse(json.dumps(event['queue'] if 'queue' in event else []), mimetype="application/json")
-        #except Exception as detail:
-#return return_error(detail)
-#.sort([('bid_amount', DESCENDING), ('timestamp', DESCENDING)])
+    except:
+        raise Http404
 
 @csrf_exempt
 def create_event(request):
@@ -62,11 +62,11 @@ def create_event(request):
         raise Http404
 
 def get_events(request):
-    try:
+    #try:
         events = [{ 'id' : str(event['_id']), 'bidding' : event['bidding'] ,'name' : event['name'] if 'name' in event else '' } for event in get_event_col(is_test(request)).find()]
         return HttpResponse(json.dumps(events), mimetype="application/json")
-    except:
-        raise Http404
+#except:
+#       raise Http404
     
 def is_test(request):
     #if request.method == 'POST':
