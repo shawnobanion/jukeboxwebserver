@@ -1,6 +1,7 @@
 from django.http import HttpResponse, Http404
 import json
-from pymongo import Connection, objectid
+import time
+from pymongo import Connection, objectid,ASCENDING, DESCENDING
 from django.views.decorators.csrf import csrf_exempt
 
 _con = Connection('jukebox-shawnobanion-db-0.dotcloud.com', 13105)
@@ -32,21 +33,22 @@ def dequeue_song(request, event_id):
                 return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
         return HttpResponse(json.dumps(None), mimetype="application/json")
     except Exception as detail:
-        return HttpResponse('{"type":"'+str(type(detail))+'"}', mimetype="application/json")
+        return return_error(detail)
 
-def enqueue_song(request, event_id, song_id, user_id):
+def enqueue_song(request, event_id, song_id, user_id, bid_amount):
     try:
-        get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$push' : { 'queue' : { 'song_id' : song_id, 'user_id' : user_id } } } )    
+        get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$push' : { 'queue' : { 'song_id' : song_id, 'user_id' : user_id, 'bid_amount' : bid_amount, 'timestamp' : time.time() } } } )    
         return HttpResponse('Success!')
-    except:
-        raise Http404
+    except Exception as detail:
+        return return_error(detail)
     
 def get_event_queue(request, event_id):
-    try:
+    #   try:
         event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
         return HttpResponse(json.dumps(event['queue'] if 'queue' in event else []), mimetype="application/json")
-    except:
-        raise Http404
+        #except Exception as detail:
+#return return_error(detail)
+#.sort([('bid_amount', DESCENDING), ('timestamp', DESCENDING)])
 
 @csrf_exempt
 def create_event(request):
@@ -61,7 +63,7 @@ def create_event(request):
 
 def get_events(request):
     try:
-        events = [{ 'id' : str(event['_id']), 'name' : event['name'] if 'name' in event else '' } for event in get_event_col(is_test(request)).find()]
+        events = [{ 'id' : str(event['_id']), 'bidding' : event['bidding'] ,'name' : event['name'] if 'name' in event else '' } for event in get_event_col(is_test(request)).find()]
         return HttpResponse(json.dumps(events), mimetype="application/json")
     except:
         raise Http404
@@ -71,8 +73,11 @@ def is_test(request):
     #    return 'test' in request.POST and request.POST['test'].lower() == 'true'
     #else:
         return 'test' in request.GET and request.GET['test'].lower() == 'true'
-    
+                            
 def get_event_col(test):
     if test:
         return _db.eventsTest
     return _db.events
+
+def return_error(detail):
+    return HttpResponse('{"type":"'+str(type(detail))+'"}', mimetype="application/json")
