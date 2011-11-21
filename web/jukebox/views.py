@@ -27,11 +27,10 @@ def dequeue_song(request, event_id):
     #song = get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$pop' : { 'queue' : -1 } } )
     try:
         event = get_event_col(is_test(request)).find_one( { '_id' : objectid.ObjectId(event_id) } )
-        if 'queue' in event:
-            if any(event['queue']):
-                song = event['queue'].pop(0)
-                get_event_col(is_test(request)).save(event)
-                return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
+        if 'queue' in event and any(event['queue']):
+            song = event['queue'].pop(0)
+            get_event_col(is_test(request)).save(event)
+            return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
         return HttpResponse(json.dumps(None), mimetype="application/json")
     except Exception as detail:
         return return_error(detail)
@@ -46,7 +45,17 @@ def enqueue_song(request, event_id, song_id, user_id, bid_amount):
 def get_event_queue(request, event_id):
     try:
         event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
-        return HttpResponse(json.dumps(event['queue'] if 'queue' in event else []), mimetype="application/json")
+        
+        if 'queue' in event:
+            queue = event['queue']
+            queue.sort(key=lambda x: x['timestamp'])
+            queue.sort(key=lambda x: x['bid_amount'], reverse=True)
+            return HttpResponse(json.dumps(queue), mimetype="application/json")
+            
+        return HttpResponse(json.dumps([]), mimetype="application/json")
+        
+        #return HttpResponse(json.dumps(sorted(event['queue'], key=lambda x: x['bid_amount'], reverse=True) if 'queue' in event else []), mimetype="application/json")
+        
     except:
         raise Http404
 
