@@ -24,37 +24,46 @@ def get_event_songs(request, event_id):
         raise Http404
 
 def dequeue_song(request, event_id):
-    #song = get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$pop' : { 'queue' : -1 } } )
     try:
         event = get_event_col(is_test(request)).find_one( { '_id' : objectid.ObjectId(event_id) } )
         if 'queue' in event and any(event['queue']):
+            
+            # TODO: CHECK TO SEE IF BIDDING IS ENABLED ON THIS EVENT OR NOT BEFORE SORTING
+            
+            # Sort the queue, pop and return the first song
+            queue = event['queue']
+            sort_queue(queue)
             song = event['queue'].pop(0)
+            event['queue'] = queue
             get_event_col(is_test(request)).save(event)
+            
             return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
+            
         return HttpResponse(json.dumps(None), mimetype="application/json")
+        
     except Exception as detail:
         return return_error(detail)
 
 def enqueue_song(request, event_id, song_id, user_id, bid_amount):
     try:
-        get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$push' : { 'queue' : { 'song_id' : song_id, 'user_id' : user_id, 'bid_amount' : bid_amount, 'timestamp' : time.time() } } } )    
+        get_event_col(is_test(request)).update( { '_id' : objectid.ObjectId(event_id) }, { '$push' : { 'queue' : { 'song_id' : song_id, 'user_id' : user_id, 'bid_amount' : int(bid_amount), 'timestamp' : time.time() } } } )    
         return HttpResponse('Success!')
     except Exception as detail:
         return return_error(detail)
     
 def get_event_queue(request, event_id):
     try:
+        
+        # TODO: CHECK TO SEE IF BIDDING IS ENABLED ON THIS EVENT OR NOT BEFORE SORTING
+        
         event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
         
         if 'queue' in event:
             queue = event['queue']
-            queue.sort(key=lambda x: x['timestamp'])
-            queue.sort(key=lambda x: x['bid_amount'], reverse=True)
+            sort_queue(queue)
             return HttpResponse(json.dumps(queue), mimetype="application/json")
             
         return HttpResponse(json.dumps([]), mimetype="application/json")
-        
-        #return HttpResponse(json.dumps(sorted(event['queue'], key=lambda x: x['bid_amount'], reverse=True) if 'queue' in event else []), mimetype="application/json")
         
     except:
         raise Http404
@@ -90,3 +99,7 @@ def get_event_col(test):
 
 def return_error(detail):
     return HttpResponse('{"type":"'+str(type(detail))+'"}', mimetype="application/json")
+    
+def sort_queue(queue):
+    queue.sort(key=lambda x: x['timestamp'])
+    queue.sort(key=lambda x: x['bid_amount'], reverse=True)
