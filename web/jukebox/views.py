@@ -28,13 +28,29 @@ def dequeue_song(request, event_id):
         event = get_event_col(is_test(request)).find_one( { '_id' : objectid.ObjectId(event_id) } )
         if 'queue' in event and any(event['queue']):
             
-            # TODO: CHECK TO SEE IF BIDDING IS ENABLED ON THIS EVENT OR NOT BEFORE SORTING
-            
-            # Sort the queue, pop and return the first song
             queue = event['queue']
-            sort_queue(queue)
+            
+            # Sort the queue if bidding is enabled
+            if 'bidding' in event and event['bidding'] == 'bid':
+                sort_queue(queue)
+                
+            # Pop the first song from the list
             song = event['queue'].pop(0)
             event['queue'] = queue
+            
+            # Increment balance
+            if any(event['queue']):
+                # Whatever is smaller - the next highest bid + $1, or my maximum bid
+                charged_amount = min([event['queue'][0]['bid_amount'] + 1, song['bid_amount']])
+            else:
+                charged_amount = song['bid_amount']
+            
+            if 'balance' in event:
+                event['balance'] += charged_amount
+            else:
+                event['balance'] = charged_amount
+                
+            # Save event
             get_event_col(is_test(request)).save(event)
             
             return HttpResponse(json.dumps(dict([(key, str(value)) for key, value in song.iteritems()])), mimetype="application/json")
@@ -43,6 +59,13 @@ def dequeue_song(request, event_id):
         
     except Exception as detail:
         return return_error(detail)
+
+def get_event_balance(request, event_id):
+    try:
+        event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
+        return HttpResponse(json.dumps(event['balance'] if 'balance' in event else 0), mimetype="application/json")
+    except:
+        raise Http404
 
 def enqueue_song(request, event_id, song_id, user_id, bid_amount):
     try:
@@ -53,14 +76,16 @@ def enqueue_song(request, event_id, song_id, user_id, bid_amount):
     
 def get_event_queue(request, event_id):
     try:
-        
-        # TODO: CHECK TO SEE IF BIDDING IS ENABLED ON THIS EVENT OR NOT BEFORE SORTING
-        
+
         event = get_event_col(is_test(request)).find_one({ '_id' : objectid.ObjectId(event_id) })
         
         if 'queue' in event:
             queue = event['queue']
-            sort_queue(queue)
+            
+            # Sort the queue if bidding is enabled
+            if 'bidding' in event and event['bidding'] == 'bid':
+                sort_queue(queue)
+                
             return HttpResponse(json.dumps(queue), mimetype="application/json")
             
         return HttpResponse(json.dumps([]), mimetype="application/json")
@@ -87,10 +112,7 @@ def get_events(request):
 #       raise Http404
     
 def is_test(request):
-    #if request.method == 'POST':
-    #    return 'test' in request.POST and request.POST['test'].lower() == 'true'
-    #else:
-        return 'test' in request.GET and request.GET['test'].lower() == 'true'
+    return 'test' in request.GET and request.GET['test'].lower() == 'true'
                             
 def get_event_col(test):
     if test:
