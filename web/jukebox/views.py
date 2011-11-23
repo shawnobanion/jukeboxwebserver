@@ -50,6 +50,8 @@ def dequeue_song(request, event_id):
             else:
                 event['balance'] = charged_amount
                 
+            song['charged_amount'] = charged_amount
+                
             # Save event
             get_event_col(is_test(request)).save(event)
             
