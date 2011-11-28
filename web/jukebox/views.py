@@ -106,6 +106,13 @@ def create_event(request):
     except:
         raise Http404
 
+def delete_event(request):
+		try:
+				event = get_event_col(is_test(request)).remove({ '_id' : objectid.ObjectId(event_id) })
+				return HttpResponse('Success!')
+		except:
+			raise Http404
+
 def get_events(request):
     #try:
         events = [{ 'id' : str(event['_id']), 'bidding' : event['bidding'] ,'name' : event['name'] if 'name' in event else '' } for event in get_event_col(is_test(request)).find()]
