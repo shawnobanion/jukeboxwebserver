@@ -106,12 +106,12 @@ def create_event(request):
     except:
         raise Http404
 
-def delete_event(request):
-		try:
-				event = get_event_col(is_test(request)).remove({ '_id' : objectid.ObjectId(event_id) })
-				return HttpResponse('Success!')
-		except:
-			raise Http404
+def delete_event(request, event_id):
+    try:
+        event = get_event_col(is_test(request)).remove({ '_id' : objectid.ObjectId(event_id) })
+        return HttpResponse('Success!')
+    except:
+        raise Http404
 
 def get_events(request):
     #try:
